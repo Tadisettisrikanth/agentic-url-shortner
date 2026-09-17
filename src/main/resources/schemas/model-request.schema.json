@@ -6,7 +6,7 @@
   "required": ["agentRole", "schemaName", "instructions", "context", "maxOutputCharacters"],
   "properties": {
     "agentRole": {"type": "string", "minLength": 1},
-    "schemaName": {"const": "specialist_output"},
+    "schemaName": {"enum": ["specialist_output", "file_operation_proposal"]},
     "instructions": {"type": "string", "minLength": 1},
     "context": {"type": "object"},
     "maxOutputCharacters": {"type": "integer", "minimum": 512, "maximum": 100000}

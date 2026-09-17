@@ -35,5 +35,6 @@ public class RepositoryAnalysisEntity {
     public UUID getId() { return id; }
     public UUID getRevisionId() { return revisionId; }
     public String getAnalysisHash() { return analysisHash; }
+    public String getWorkspaceLocation() { return workspaceLocation; }
+    public String getBaselineManifestHash() { return baselineManifestHash; }
 }
-

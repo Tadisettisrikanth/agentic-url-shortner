@@ -66,3 +66,22 @@ $plan.repositoryMap
 $plan.plan.tasks
 $plan.agentInvocations
 ```
+
+## Governed source application
+
+After reviewing the current plan, request agent-generated production and test proposals using only its exact hash. Callers cannot submit file operations or content:
+
+```powershell
+$applyBody = @{ planHash = $plan.planHash } | ConvertTo-Json
+$changes = Invoke-RestMethod -Method Post `
+  -Uri "http://localhost:8080/api/v1/workflows/$workflowId/changes/apply" `
+  -ContentType "application/json" -Body $applyBody
+
+$changes.status
+$changes.changedPaths
+$changes.unifiedDiff
+```
+
+The endpoint moves a successful workflow to `EXECUTING`. Implementation and test agents return the operations applied by the controlled patch engine; there is no separate hardcoded writer. Each operation carries requirement, criterion, task and input-hash lineage. Policies enforce isolated-workspace paths, permitted roots/types, operation and byte limits, duplicate rejection, optimistic hashes, atomic replacement, manifests, diffs and verified rollback.
+
+Commit 5 proves the provider-to-proposal-to-applied-diff chain with compiled-source-set traceability contracts. Complete requirement-specific URL-shortener scenario generation is delivered in commit 8; real compiler/test execution begins in commit 6.

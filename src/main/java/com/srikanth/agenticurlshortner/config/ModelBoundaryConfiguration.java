@@ -5,6 +5,8 @@ import com.srikanth.agenticurlshortner.model.BoundedModelGateway;
 import com.srikanth.agenticurlshortner.model.DeterministicModelProvider;
 import com.srikanth.agenticurlshortner.model.JdkOpenAiTransport;
 import com.srikanth.agenticurlshortner.model.OpenAiResponsesModelProvider;
+import com.srikanth.agenticurlshortner.patch.FileOperationProposalAgent;
+import com.srikanth.agenticurlshortner.patch.ModelFileOperationProposalAgent;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,5 +30,12 @@ public class ModelBoundaryConfiguration {
     BoundedModelGateway boundedModelGateway(ModelProvider provider, ModelProviderProperties properties,
                                             ObjectMapper objectMapper) {
         return new BoundedModelGateway(provider, properties, objectMapper);
+    }
+
+    @Bean
+    FileOperationProposalAgent fileOperationProposalAgent(BoundedModelGateway gateway,
+                                                          ModelProviderProperties properties,
+                                                          ObjectMapper objectMapper) {
+        return new ModelFileOperationProposalAgent(gateway, properties, objectMapper);
     }
 }

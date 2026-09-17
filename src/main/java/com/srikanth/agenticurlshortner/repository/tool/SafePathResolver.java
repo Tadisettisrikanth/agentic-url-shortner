@@ -32,6 +32,26 @@ public final class SafePathResolver {
         }
     }
 
+    public Path resolveForWrite(String relativePath) {
+        Path relative = parseRelative(relativePath);
+        if (relative.toString().equals(".")) throw new RepositoryAccessException("file path is required");
+        Path candidate = root.resolve(relative).normalize();
+        if (!candidate.startsWith(root)) throw new RepositoryAccessException("path escapes approved root");
+        try {
+            rejectSymbolicComponents(candidate);
+            Path existingParent = candidate.getParent();
+            while (existingParent != null && !Files.exists(existingParent, LinkOption.NOFOLLOW_LINKS)) {
+                existingParent = existingParent.getParent();
+            }
+            if (existingParent == null || !existingParent.toRealPath(LinkOption.NOFOLLOW_LINKS).startsWith(realRoot)) {
+                throw new RepositoryAccessException("path parent escapes approved root");
+            }
+            return candidate;
+        } catch (IOException exception) {
+            throw new RepositoryAccessException("path validation failed: " + relativePath, exception);
+        }
+    }
+
     public Path root() { return realRoot; }
 
     private Path parseRelative(String value) {

@@ -53,6 +53,23 @@ class ModelProviderContractTest {
     }
 
     @Test
+    void openAiProviderUsesTheFileOperationSchemaForPatchAgents() {
+        AtomicReference<String> requestBody = new AtomicReference<>();
+        OpenAiTransport transport = (endpoint, apiKey, body, timeout) -> {
+            requestBody.set(body);
+            return "{\"output_text\":\"{\\\"operations\\\":[]}\"}";
+        };
+        var provider = new OpenAiResponsesModelProvider(properties(Duration.ofSeconds(1), 10_000, 5_000),
+                transport, objectMapper);
+
+        provider.generate(new ModelRequest("IMPLEMENTATION", "file_operation_proposal", "Return operations",
+                Map.of("objective", "implement expiry"), 5_000));
+
+        assertThat(requestBody.get()).contains("file_operation_proposal", "relativePath", "expectedSha256",
+                "acceptanceCriterionIds", "CREATE", "UPDATE", "DELETE");
+    }
+
+    @Test
     void redactsSecretsBeforeCallingAnyProvider() {
         AtomicReference<ModelRequest> captured = new AtomicReference<>();
         ModelProvider provider = request -> {

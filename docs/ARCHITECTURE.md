@@ -12,7 +12,9 @@ The platform separates a durable control plane from an isolated execution plane.
 4. Repository analysis and dynamic planning are persisted with content hashes.
 5. The specialist orchestrator invokes all provider-neutral roles through one bounded model gateway.
 6. Each invocation persists a task, dependency, execution attempt, validated artifact and invocation evidence.
-7. The workflow pauses in `AWAITING_CHANGE_APPROVAL`. No generated proposal is applied in commit 4.
+7. The workflow pauses in `AWAITING_CHANGE_APPROVAL` with the exact plan hash.
+8. A hash-bound apply request invokes implementation and test proposal agents through the selected model provider.
+9. The governed patch engine applies those exact structured operations in the isolated workspace and persists proposal-to-diff lineage.
 
 ## Model boundary
 
@@ -44,5 +46,11 @@ Every specialist invocation records workflow, revision, task, agent role, provid
 - Model output is untrusted data and cannot directly execute a command or mutate source.
 - Repository paths are resolved beneath configured approved roots.
 - OpenAI credentials come only from environment configuration and are never inserted into model context.
-- Source mutation remains behind current-revision change approval and the controlled proposal pipeline introduced in commit 5.
+- Source mutation requires the exact current plan hash and runs only through the controlled proposal pipeline. Authenticated approval roles are added in commit 7.
 - Real compiler/test execution is limited to fixed capabilities introduced in commit 6.
+
+## Patch boundary
+
+Model output for implementation, test generation and repair uses the `file-operation-proposal` schema. Operations are limited to `CREATE`, `UPDATE` and `DELETE`, with complete replacement content for writes and expected content hashes for updates/deletes. The same validated proposal object is persisted and handed to the applier for deterministic and OpenAI providers.
+
+Before mutation, the patch engine validates every operation, including normalized relative paths, symbolic-link components, permitted roots/extensions, duplicate paths, traceability fields, operation count, total bytes and optimistic hashes. Writes use same-directory temporary files and atomic replacement where supported. Any failure restores the baseline snapshot and verifies its manifest.

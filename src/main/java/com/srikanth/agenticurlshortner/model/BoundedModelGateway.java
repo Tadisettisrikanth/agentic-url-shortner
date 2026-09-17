@@ -28,6 +28,12 @@ public final class BoundedModelGateway {
     }
 
     public ValidatedModelOutput generate(ModelRequest request) {
+        ModelResponse response = generateRaw(request);
+        SpecialistOutput output = validator.validate(deserializeOutput(response.structuredOutput()));
+        return new ValidatedModelOutput(response, output);
+    }
+
+    public ModelResponse generateRaw(ModelRequest request) {
         String serializedContext = serialize(request.context());
         if (serializedContext.length() > properties.maxContextCharacters()) {
             throw new ModelBoundaryException("model context exceeds configured character limit");
@@ -40,8 +46,7 @@ public final class BoundedModelGateway {
                 || response.structuredOutput().length() > safeRequest.maxOutputCharacters()) {
             throw new ModelBoundaryException("model output exceeds configured character limit");
         }
-        SpecialistOutput output = validator.validate(deserializeOutput(response.structuredOutput()));
-        return new ValidatedModelOutput(response, output);
+        return response;
     }
 
     private ModelResponse invokeWithTimeout(ModelRequest request) {

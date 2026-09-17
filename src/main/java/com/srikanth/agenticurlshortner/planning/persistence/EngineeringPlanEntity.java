@@ -35,5 +35,6 @@ public class EngineeringPlanEntity {
     public UUID getId() { return id; }
     public UUID getRevisionId() { return revisionId; }
     public String getPlanHash() { return planHash; }
+    public String getRequirementHash() { return requirementHash; }
+    public String getRepositoryAnalysisHash() { return repositoryAnalysisHash; }
 }
-

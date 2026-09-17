@@ -20,6 +20,10 @@ public final class DeterministicModelProvider implements ModelProvider {
     @Override
     public ModelResponse generate(ModelRequest request) {
         Instant started = Instant.now();
+        if (request.schemaName().equals("file_operation_proposal")) {
+            return new ModelResponse("deterministic", "deterministic-v1",
+                    serialize(request.context().get("proposedOperations")), Duration.between(started, Instant.now()));
+        }
         String objective = String.valueOf(request.context().getOrDefault("objective", "the current revision"));
         boolean evidenceReady = Boolean.TRUE.equals(request.context().get("validationPassed"));
         boolean lateStage = request.agentRole().equals("RELEASE_READINESS");
@@ -32,12 +36,8 @@ public final class DeterministicModelProvider implements ModelProvider {
                 List.of("Downstream claims remain provisional until source application and real validation complete."),
                 List.of(deliverable(request.agentRole(), objective)),
                 !(lateStage || failureDependent) || evidenceReady);
-        try {
-            return new ModelResponse("deterministic", "deterministic-v1",
-                    objectMapper.writeValueAsString(output), Duration.between(started, Instant.now()));
-        } catch (JacksonException exception) {
-            throw new ModelBoundaryException("deterministic output serialization failed", exception);
-        }
+        return new ModelResponse("deterministic", "deterministic-v1",
+                serialize(output), Duration.between(started, Instant.now()));
     }
 
     private List<String> decision(String role, boolean validated) {
@@ -54,5 +54,12 @@ public final class DeterministicModelProvider implements ModelProvider {
 
     private String deliverable(String role, String objective) {
         return role.toLowerCase().replace('_', '-') + ": " + objective;
+    }
+
+    private String serialize(Object value) {
+        try { return objectMapper.writeValueAsString(value); }
+        catch (JacksonException exception) {
+            throw new ModelBoundaryException("deterministic output serialization failed", exception);
+        }
     }
 }

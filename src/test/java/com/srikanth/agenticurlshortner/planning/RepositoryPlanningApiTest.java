@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -80,6 +81,7 @@ class RepositoryPlanningApiTest {
                 .andReturn().getResponse().getContentAsString();
 
         UUID revisionId = UUID.fromString(JsonPath.read(response, "$.revisionId"));
+        String planHash = JsonPath.read(response, "$.planHash");
         assertThat(analyses.findByRevisionId(revisionId)).isPresent();
         assertThat(plans.findByRevisionId(revisionId)).isPresent();
         assertThat(workflows.findById(workflowId).orElseThrow().getStatus())
@@ -92,6 +94,29 @@ class RepositoryPlanningApiTest {
                 + "and length(output_json) > 0", Integer.class, revisionId)).isEqualTo(12);
         assertThat(jdbc.queryForObject("select count(*) from task_dependencies d join agent_tasks t "
                 + "on t.id = d.task_id where t.revision_id = ?", Integer.class, revisionId)).isEqualTo(11);
+        mvc.perform(post("/api/v1/workflows/{id}/changes/apply", workflowId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"planHash\":\"" + "0".repeat(64) + "\"}"))
+                .andExpect(status().isConflict());
+        mvc.perform(post("/api/v1/workflows/{id}/changes/apply", workflowId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"planHash\":\"" + planHash + "\",\"operations\":[]}"))
+                .andExpect(status().isBadRequest());
+        String applied = mvc.perform(post("/api/v1/workflows/{id}/changes/apply", workflowId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"planHash\":\"" + planHash + "\"}"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("EXECUTING"))
+                .andExpect(jsonPath("$.proposalIds.length()").value(2))
+                .andExpect(jsonPath("$.changedPaths.length()").value(2))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(JsonPath.<List<String>>read(applied, "$.changedPaths"))
+                .allMatch(path -> path.startsWith("src/main/") || path.startsWith("src/test/"));
+        assertThat(jdbc.queryForObject("select count(*) from patch_proposals where revision_id = ?",
+                Integer.class, revisionId)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("select count(*) from applied_file_operations a join patch_proposals p "
+                + "on p.id=a.proposal_id where p.revision_id=?", Integer.class, revisionId)).isEqualTo(2);
+        assertThat(workflows.findById(workflowId).orElseThrow().getStatus()).isEqualTo(WorkflowStatus.EXECUTING);
         mvc.perform(post("/api/v1/workflows/{id}/plan", workflowId)).andExpect(status().isConflict());
     }
 

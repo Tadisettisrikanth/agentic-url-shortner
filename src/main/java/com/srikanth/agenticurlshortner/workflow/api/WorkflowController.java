@@ -2,6 +2,7 @@ package com.srikanth.agenticurlshortner.workflow.api;
 
 import com.srikanth.agenticurlshortner.requirement.application.ClarificationService;
 import com.srikanth.agenticurlshortner.planning.RepositoryPlanningService;
+import com.srikanth.agenticurlshortner.patch.PatchApplicationService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -21,13 +22,16 @@ class WorkflowController {
     private final WorkflowQueryService queryService;
     private final ClarificationService clarificationService;
     private final RepositoryPlanningService planningService;
+    private final PatchApplicationService patchApplicationService;
 
     WorkflowController(WorkflowSubmissionService service, WorkflowQueryService queryService,
-                       ClarificationService clarificationService, RepositoryPlanningService planningService) {
+                       ClarificationService clarificationService, RepositoryPlanningService planningService,
+                       PatchApplicationService patchApplicationService) {
         this.service = service;
         this.queryService = queryService;
         this.clarificationService = clarificationService;
         this.planningService = planningService;
+        this.patchApplicationService = patchApplicationService;
     }
 
     @PostMapping
@@ -54,5 +58,12 @@ class WorkflowController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     PlanningResponse plan(@PathVariable UUID workflowId) {
         return planningService.analyzeAndPlan(workflowId);
+    }
+
+    @PostMapping("/{workflowId}/changes/apply")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    ApplyChangesResponse applyChanges(@PathVariable UUID workflowId,
+                                      @Valid @RequestBody ApplyChangesRequest request) {
+        return patchApplicationService.generateAndApply(workflowId, request);
     }
 }

@@ -38,7 +38,7 @@ public final class OpenAiResponsesModelProvider implements ModelProvider {
                         "type", "json_schema",
                         "name", request.schemaName(),
                         "strict", true,
-                        "schema", SpecialistJsonSchema.VALUE))));
+                        "schema", schema(request.schemaName())))));
         String raw = transport.post(properties.baseUrl().toString(), properties.apiKey(), body, properties.timeout());
         String output = extractOutputText(raw);
         return new ModelResponse("openai", properties.model(), output, Duration.between(started, Instant.now()));
@@ -72,5 +72,13 @@ public final class OpenAiResponsesModelProvider implements ModelProvider {
         } catch (JacksonException exception) {
             throw new ModelBoundaryException("OpenAI request serialization failed", exception);
         }
+    }
+
+    private Map<String, Object> schema(String schemaName) {
+        return switch (schemaName) {
+            case "specialist_output" -> SpecialistJsonSchema.VALUE;
+            case "file_operation_proposal" -> PatchJsonSchema.VALUE;
+            default -> throw new ModelBoundaryException("unsupported model schema: " + schemaName);
+        };
     }
 }
