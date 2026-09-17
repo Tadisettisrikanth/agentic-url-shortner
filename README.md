@@ -1,6 +1,6 @@
 # Agentic URL Shortner
 
-This repository is a governed agentic software-engineering platform demonstrated through URL-shortener scenarios. Commit 1 establishes the Java 21 foundation, durable schema, health endpoints, execution contracts, and domain invariants. Later commits connect requirement interpretation to repository analysis, generated source and tests, real validation, repair, governance, and release readiness.
+This repository is a governed agentic software-engineering platform demonstrated through URL-shortener scenarios. The current implementation provides the Java 21 foundation, durable schema, execution contracts, asynchronous requirement interpretation, ambiguity handling, authenticated clarification, and revision lineage. Later commits connect those requirements to repository analysis, generated source and tests, real validation, repair, governance, and release readiness.
 
 ## Prerequisites
 
@@ -30,6 +30,12 @@ Run verification:
 .\mvnw.cmd clean verify
 ```
 
-## Commit 1 API boundary
+## Requirement API
 
-`POST /api/v1/workflows` accepts only `requirement` and `repositoryPath`. In commit 1 it returns a workflow identity and initial revision in `RECEIVED` state; durable submission storage arrives with the asynchronous requirement pipeline. Caller-provided execution state, completion output, validation, or artifacts are rejected. Requirement interpretation and asynchronous execution are introduced in commit 2.
+`POST /api/v1/workflows` accepts only `requirement` and `repositoryPath`, persists revision 1, returns HTTP 202 in `RECEIVED`, and asynchronously produces normalized acceptance criteria, assumptions, constraints, risks, and ambiguity analysis.
+
+`GET /api/v1/workflows/{workflowId}` returns the current revision and analysis. A clear requirement advances to `PLANNING`. An ambiguous requirement advances to `AWAITING_CLARIFICATION` and keeps `sourceMutationAllowed` false.
+
+Clarification is submitted to `POST /api/v1/workflows/{workflowId}/clarifications` with `X-Operator-Id` and `X-Operator-Token`. For local development the token defaults to `local-operator-token`; set `AGENTIC_CLARIFICATION_TOKEN` outside local development. A complete clarification creates a child revision, invalidates requirement-derived outputs, reuses unaffected repository-derived evidence, and reruns interpretation asynchronously.
+
+Caller-provided execution state, completion output, validation, or artifacts remain rejected.

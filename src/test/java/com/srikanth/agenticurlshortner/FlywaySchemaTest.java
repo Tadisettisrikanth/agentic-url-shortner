@@ -24,10 +24,16 @@ class FlywaySchemaTest {
         assertThat(tables).contains(
                 "workflows", "workflow_revisions", "agent_tasks", "task_dependencies",
                 "execution_attempts", "engineering_artifacts", "validation_results",
-                "approvals", "policy_decisions", "audit_events", "flyway_schema_history");
+                "approvals", "policy_decisions", "audit_events", "requirement_analyses",
+                "requirement_items", "clarification_questions", "clarifications",
+                "revision_outputs", "flyway_schema_history");
         Integer successful = jdbcTemplate.queryForObject(
                 "select count(*) from flyway_schema_history where version = '1' and success = true",
                 Integer.class);
         assertThat(successful).isOne();
+        Integer v2 = jdbcTemplate.queryForObject(
+                "select count(*) from flyway_schema_history where version = '2' and success = true",
+                Integer.class);
+        assertThat(v2).isOne();
     }
 }

@@ -18,5 +18,6 @@ class AgenticUrlShortnerApplicationTest {
         assertThat(executionProperties.deterministic()).isTrue();
         assertThat(executionProperties.maxAttempts()).isEqualTo(3);
         assertThat(executionProperties.workspaceRoot()).hasToString("agent-workspaces");
+        assertThat(executionProperties.clarificationToken()).isEqualTo("local-operator-token");
     }
 }

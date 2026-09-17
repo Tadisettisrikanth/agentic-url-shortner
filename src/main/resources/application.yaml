@@ -40,4 +40,4 @@ agentic:
     deterministic: ${AGENTIC_DETERMINISTIC:true}
     max-attempts: ${AGENTIC_MAX_ATTEMPTS:3}
     workspace-root: ${AGENTIC_WORKSPACE_ROOT:./agent-workspaces}
-
+    clarification-token: ${AGENTIC_CLARIFICATION_TOKEN:local-operator-token}

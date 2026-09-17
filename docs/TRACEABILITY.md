@@ -5,7 +5,7 @@ This living matrix maps every official assignment requirement to planned impleme
 | ID | Requirement | Implementation | Automated tests | Runtime evidence / reviewer step | Status |
 |---|---|---|---|---|---|
 | OBJ-1 | Transform one requirement into a reviewable engineering outcome | Workflow/revision, task, artifact, validation and execution contracts | Domain and API boundary tests | Submit workflow and inspect revision identity/hash | PARTIAL-C1 |
-| REQ-1 | Interpret intent, ambiguity and normalize the problem | Requirement/revision contracts; agents in C2/C4 | Clear/ambiguous contracts in C2 | Greenfield and ambiguous demos in C8/C10 | PLANNED-C2 |
+| REQ-1 | Interpret intent, ambiguity and normalize the problem | Durable async requirement agent, normalized criteria/assumptions/constraints/risks, validated ambiguity output and clarification revisions | Clear, structurally ambiguous, domain-ambiguous, invalid-output, auth and lineage tests | Submit requirement, poll workflow analysis, clarify with exact question answers | COMPLETE-C2 |
 | REQ-2 | Decompose requirements into sequenced dependent tasks | Task/dependency contracts; dynamic planner in C3 | Graph and requirement-difference tests in C3 | Inspect generated task-plan artifact | PLANNED-C3 |
 | REQ-3 | Reason about brownfield modules, APIs and data flows | Repository workspace contract; analyzer in C3 | Repository fixture analysis in C3 | Brownfield repository-analysis artifact | PLANNED-C3 |
 | REQ-4A | Orchestrate the full SDLC using an explicit dependency graph | Workflow/task contracts; scheduler in C7 | Graph scheduling tests in C7 | Persisted graph/state history | PLANNED-C7 |
@@ -25,7 +25,7 @@ This living matrix maps every official assignment requirement to planned impleme
 | DEL-2 | Architecture overview and key decisions | Architecture document in C4/C10 | Documentation consistency tests C10 | Reviewer architecture walkthrough | PLANNED-C4 |
 | DEL-3 | Greenfield scenario | Scenario and full generated vertical slice C8 | Generated unit/HTTP tests C8 | `demo.ps1 greenfield` C10 | PLANNED-C8 |
 | DEL-4 | Brownfield scenario | Integrated enhancement C8 | Runtime-path behavior tests C8 | `demo.ps1 brownfield` C10 | PLANNED-C8 |
-| DEL-5 | Ambiguous scenario | Clarification/revision pipeline C2/C8 | No-mutation and lineage tests | `demo.ps1 ambiguous` C10 | PLANNED-C2 |
+| DEL-5 | Ambiguous scenario | Clarification/revision pipeline and mutation guard C2; complete generated-feature scenario C8 | No-mutation, authentication, revision lineage, invalidation and reuse tests | Poll `AWAITING_CLARIFICATION`, submit clarification and inspect revision 2; `demo.ps1 ambiguous` C10 | PARTIAL-C2 |
 | DEL-6 | Setup instructions | Commit-specific setup in README | Wrapper verification | Follow README on clean machine | PARTIAL-C1 |
 | DEL-7 | Testing approach, limitations and trade-offs | Verification/coverage docs finalized C10 | Full reactor verification | Reviewer guide/manual acceptance | PLANNED-C10 |
 | QUAL-1 | Modular, testable, reliable, secure and scalable design | Package boundaries, immutable contracts and migration baseline | Foundation tests | Build, health and schema evidence | PARTIAL-C1 |
@@ -40,3 +40,13 @@ This living matrix maps every official assignment requirement to planned impleme
 - Caller-supplied `state` and `output` receive HTTP 400.
 - No manual task-completion endpoint exists.
 - Domain completion requires an executor attempt, artifacts, validation results, successful tools and a passed exit gate.
+
+## Commit 2 evidence checklist
+
+- Submission persists workflow and revision 1 before dispatching bounded asynchronous analysis.
+- Validated agent output contains normalized problem, requirement-specific acceptance criteria, assumptions, constraints, risks, risk level and ambiguity reasons.
+- Structurally and semantically different requirements produce different analysis and clarification decisions.
+- Ambiguous revisions enter `AWAITING_CLARIFICATION` with `sourceMutationAllowed=false`.
+- Missing answers and invalid operator credentials are rejected without creating a revision.
+- Accepted clarification creates revision 2 with a parent revision, actor and answer lineage.
+- Requirement-derived outputs are invalidated and regenerated; repository-derived evidence is reused with an explicit source ID.
