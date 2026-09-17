@@ -27,6 +27,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -40,6 +41,7 @@ class RepositoryPlanningApiTest {
     @Autowired WorkflowRevisionRepository revisions;
     @Autowired RepositoryAnalysisRepository analyses;
     @Autowired EngineeringPlanRepository plans;
+    @Autowired JdbcTemplate jdbc;
 
     @BeforeAll
     static void createRepositoryFixture() throws IOException {
@@ -72,6 +74,9 @@ class RepositoryPlanningApiTest {
                 .andExpect(jsonPath("$.plan.tasks[?(@.agentRole == 'VALIDATION')]").isNotEmpty())
                 .andExpect(jsonPath("$.plan.tasks[?(@.agentRole == 'RISK')]").isNotEmpty())
                 .andExpect(jsonPath("$.plan.tasks[?(@.agentRole == 'RELEASE_READINESS')]").isNotEmpty())
+                .andExpect(jsonPath("$.agentInvocations.length()").value(12))
+                .andExpect(jsonPath("$.agentInvocations[?(@.role == 'ARCHITECTURE')]").isNotEmpty())
+                .andExpect(jsonPath("$.agentInvocations[?(@.role == 'RELEASE_READINESS' && @.output.ready == false)]").isNotEmpty())
                 .andReturn().getResponse().getContentAsString();
 
         UUID revisionId = UUID.fromString(JsonPath.read(response, "$.revisionId"));
@@ -79,6 +84,14 @@ class RepositoryPlanningApiTest {
         assertThat(plans.findByRevisionId(revisionId)).isPresent();
         assertThat(workflows.findById(workflowId).orElseThrow().getStatus())
                 .isEqualTo(WorkflowStatus.AWAITING_CHANGE_APPROVAL);
+        assertThat(jdbc.queryForObject("select count(*) from agent_invocations where revision_id = ?",
+                Integer.class, revisionId)).isEqualTo(12);
+        assertThat(jdbc.queryForObject("select count(*) from engineering_artifacts where revision_id = ? "
+                + "and validation_status = 'PASSED'", Integer.class, revisionId)).isEqualTo(12);
+        assertThat(jdbc.queryForObject("select count(*) from agent_invocations where revision_id = ? "
+                + "and length(output_json) > 0", Integer.class, revisionId)).isEqualTo(12);
+        assertThat(jdbc.queryForObject("select count(*) from task_dependencies d join agent_tasks t "
+                + "on t.id = d.task_id where t.revision_id = ?", Integer.class, revisionId)).isEqualTo(11);
         mvc.perform(post("/api/v1/workflows/{id}/plan", workflowId)).andExpect(status().isConflict());
     }
 

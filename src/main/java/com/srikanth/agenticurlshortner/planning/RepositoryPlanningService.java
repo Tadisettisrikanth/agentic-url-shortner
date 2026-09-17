@@ -1,5 +1,6 @@
 package com.srikanth.agenticurlshortner.planning;
 
+import com.srikanth.agenticurlshortner.agent.SpecialistAgentOrchestrator;
 import com.srikanth.agenticurlshortner.config.AgenticExecutionProperties;
 import com.srikanth.agenticurlshortner.config.RepositoryToolProperties;
 import com.srikanth.agenticurlshortner.planning.persistence.EngineeringPlanEntity;
@@ -49,6 +50,7 @@ public class RepositoryPlanningService {
     private final RepositoryAnalysisRepository repositoryAnalyses;
     private final EngineeringPlanRepository plans;
     private final SourceMutationGuard mutationGuard;
+    private final SpecialistAgentOrchestrator agentOrchestrator;
     private final ObjectMapper objectMapper;
 
     public RepositoryPlanningService(RepositoryToolProperties repositoryProperties,
@@ -57,6 +59,7 @@ public class RepositoryPlanningService {
                                      RequirementAnalysisRepository analyses, RequirementItemRepository items,
                                      RepositoryAnalysisRepository repositoryAnalyses,
                                      EngineeringPlanRepository plans, SourceMutationGuard mutationGuard,
+                                     SpecialistAgentOrchestrator agentOrchestrator,
                                      ObjectMapper objectMapper) {
         this.repositoryProperties = repositoryProperties;
         this.executionProperties = executionProperties;
@@ -67,6 +70,7 @@ public class RepositoryPlanningService {
         this.repositoryAnalyses = repositoryAnalyses;
         this.plans = plans;
         this.mutationGuard = mutationGuard;
+        this.agentOrchestrator = agentOrchestrator;
         this.objectMapper = objectMapper;
     }
 
@@ -103,13 +107,15 @@ public class RepositoryPlanningService {
                     analysisHash, now));
             plans.save(new EngineeringPlanEntity(UUID.randomUUID(), revision.getId(), revision.getRequirementHash(),
                     analysisHash, planJson, planHash, now));
+            var invocations = agentOrchestrator.execute(workflowId, revision.getId(), requirement, repositoryMap,
+                    plan, revision.getRequirementHash(), analysisHash, planHash);
             workflow.transition(WorkflowStatus.AWAITING_CHANGE_APPROVAL, now);
             revision.transition(WorkflowStatus.AWAITING_CHANGE_APPROVAL);
             workflows.save(workflow);
             revisions.save(revision);
             return new PlanningResponse(workflowId, revision.getId(), WorkflowStatus.AWAITING_CHANGE_APPROVAL,
                     workspace.repositoryPath(), workspace.baselineManifest().manifestHash(), analysisHash,
-                    repositoryMap, planHash, plan);
+                    repositoryMap, planHash, plan, invocations);
         } catch (RuntimeException exception) {
             try {
                 workspaces.discard(Path.of(workspace.repositoryPath()));

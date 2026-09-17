@@ -44,7 +44,17 @@ Caller-provided execution state, completion output, validation, or artifacts rem
 
 `POST /api/v1/workflows/{workflowId}/plan` is available after a clear requirement reaches `PLANNING`. It copies the submitted repository into an isolated revision workspace, records a content-addressed baseline manifest, analyzes brownfield structure and data flow, and persists a validated dependency plan before advancing to `AWAITING_CHANGE_APPROVAL`.
 
-Repositories must be below an explicitly approved root. The local default is `./scenario-repositories`; configure one or more roots with `AGENTIC_REPOSITORY_APPROVED_ROOTS`. Repository access rejects absolute/traversal paths, symbolic-link escapes, unsupported files, and configured size, file-count, and search-result limit violations.
+Repositories must be below an explicitly approved root. The local default is `./scenario-repositories`; configure it with `AGENTIC_REPOSITORY_ROOT`. Repository access rejects absolute/traversal paths, symbolic-link escapes, unsupported files, and configured size, file-count, and search-result limit violations.
+
+Planning automatically invokes the 12 specialist roles documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). The default `deterministic` provider requires no API key. To use the same contracts with the OpenAI Responses API, set:
+
+```powershell
+$env:AGENTIC_MODEL_PROVIDER = "openai"
+$env:AGENTIC_MODEL_NAME = "gpt-5"
+$env:OPENAI_API_KEY = "<environment-secret>"
+```
+
+Optional model controls are `OPENAI_BASE_URL`, `AGENTIC_MODEL_TIMEOUT`, `AGENTIC_MODEL_MAX_CONTEXT_CHARS`, and `AGENTIC_MODEL_MAX_OUTPUT_CHARS`. Credentials are environment-only and are redacted from provider context. Model output cannot execute commands or mutate the repository directly.
 
 Example after polling a workflow to `PLANNING`:
 
@@ -54,4 +64,5 @@ $plan = Invoke-RestMethod -Method Post `
 $plan.status
 $plan.repositoryMap
 $plan.plan.tasks
+$plan.agentInvocations
 ```

@@ -48,3 +48,11 @@ agentic:
     max-file-bytes: ${AGENTIC_REPOSITORY_MAX_FILE_BYTES:1048576}
     max-total-bytes: ${AGENTIC_REPOSITORY_MAX_TOTAL_BYTES:52428800}
     max-search-matches: ${AGENTIC_REPOSITORY_MAX_SEARCH_MATCHES:500}
+  model:
+    provider: ${AGENTIC_MODEL_PROVIDER:deterministic}
+    model: ${AGENTIC_MODEL_NAME:deterministic-v1}
+    base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1/responses}
+    api-key: ${OPENAI_API_KEY:}
+    timeout: ${AGENTIC_MODEL_TIMEOUT:PT20S}
+    max-context-characters: ${AGENTIC_MODEL_MAX_CONTEXT_CHARS:60000}
+    max-output-characters: ${AGENTIC_MODEL_MAX_OUTPUT_CHARS:16000}
