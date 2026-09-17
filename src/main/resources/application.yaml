@@ -41,3 +41,10 @@ agentic:
     max-attempts: ${AGENTIC_MAX_ATTEMPTS:3}
     workspace-root: ${AGENTIC_WORKSPACE_ROOT:./agent-workspaces}
     clarification-token: ${AGENTIC_CLARIFICATION_TOKEN:local-operator-token}
+  repository:
+    approved-roots:
+      - ${AGENTIC_REPOSITORY_ROOT:./scenario-repositories}
+    max-files: ${AGENTIC_REPOSITORY_MAX_FILES:2000}
+    max-file-bytes: ${AGENTIC_REPOSITORY_MAX_FILE_BYTES:1048576}
+    max-total-bytes: ${AGENTIC_REPOSITORY_MAX_TOTAL_BYTES:52428800}
+    max-search-matches: ${AGENTIC_REPOSITORY_MAX_SEARCH_MATCHES:500}

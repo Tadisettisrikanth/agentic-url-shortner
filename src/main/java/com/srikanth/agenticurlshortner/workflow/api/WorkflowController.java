@@ -1,6 +1,7 @@
 package com.srikanth.agenticurlshortner.workflow.api;
 
 import com.srikanth.agenticurlshortner.requirement.application.ClarificationService;
+import com.srikanth.agenticurlshortner.planning.RepositoryPlanningService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -19,12 +20,14 @@ class WorkflowController {
     private final WorkflowSubmissionService service;
     private final WorkflowQueryService queryService;
     private final ClarificationService clarificationService;
+    private final RepositoryPlanningService planningService;
 
     WorkflowController(WorkflowSubmissionService service, WorkflowQueryService queryService,
-                       ClarificationService clarificationService) {
+                       ClarificationService clarificationService, RepositoryPlanningService planningService) {
         this.service = service;
         this.queryService = queryService;
         this.clarificationService = clarificationService;
+        this.planningService = planningService;
     }
 
     @PostMapping
@@ -46,5 +49,10 @@ class WorkflowController {
                                   @Valid @RequestBody ClarificationRequest request) {
         return clarificationService.clarify(workflowId, request, operatorToken, operatorId);
     }
-}
 
+    @PostMapping("/{workflowId}/plan")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    PlanningResponse plan(@PathVariable UUID workflowId) {
+        return planningService.analyzeAndPlan(workflowId);
+    }
+}

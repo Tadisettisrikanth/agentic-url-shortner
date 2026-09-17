@@ -26,7 +26,8 @@ class FlywaySchemaTest {
                 "execution_attempts", "engineering_artifacts", "validation_results",
                 "approvals", "policy_decisions", "audit_events", "requirement_analyses",
                 "requirement_items", "clarification_questions", "clarifications",
-                "revision_outputs", "flyway_schema_history");
+                "revision_outputs", "repository_analyses", "engineering_plans",
+                "flyway_schema_history");
         Integer successful = jdbcTemplate.queryForObject(
                 "select count(*) from flyway_schema_history where version = '1' and success = true",
                 Integer.class);
@@ -35,5 +36,9 @@ class FlywaySchemaTest {
                 "select count(*) from flyway_schema_history where version = '2' and success = true",
                 Integer.class);
         assertThat(v2).isOne();
+        Integer v3 = jdbcTemplate.queryForObject(
+                "select count(*) from flyway_schema_history where version = '3' and success = true",
+                Integer.class);
+        assertThat(v3).isOne();
     }
 }

@@ -6,9 +6,9 @@ This living matrix maps every official assignment requirement to planned impleme
 |---|---|---|---|---|---|
 | OBJ-1 | Transform one requirement into a reviewable engineering outcome | Workflow/revision, task, artifact, validation and execution contracts | Domain and API boundary tests | Submit workflow and inspect revision identity/hash | PARTIAL-C1 |
 | REQ-1 | Interpret intent, ambiguity and normalize the problem | Durable async requirement agent, normalized criteria/assumptions/constraints/risks, validated ambiguity output and clarification revisions | Clear, structurally ambiguous, domain-ambiguous, invalid-output, auth and lineage tests | Submit requirement, poll workflow analysis, clarify with exact question answers | COMPLETE-C2 |
-| REQ-2 | Decompose requirements into sequenced dependent tasks | Task/dependency contracts; dynamic planner in C3 | Graph and requirement-difference tests in C3 | Inspect generated task-plan artifact | PLANNED-C3 |
-| REQ-3 | Reason about brownfield modules, APIs and data flows | Repository workspace contract; analyzer in C3 | Repository fixture analysis in C3 | Brownfield repository-analysis artifact | PLANNED-C3 |
-| REQ-4A | Orchestrate the full SDLC using an explicit dependency graph | Workflow/task contracts; scheduler in C7 | Graph scheduling tests in C7 | Persisted graph/state history | PLANNED-C7 |
+| REQ-2 | Decompose requirements into sequenced dependent tasks | Requirement/evidence-driven planner with validated roles, dependencies and gates | Graph validity and requirement-difference tests | Call planning API and inspect persisted plan/hash | COMPLETE-C3 |
+| REQ-3 | Reason about brownfield modules, APIs and data flows | Bounded repository tools, isolated baseline and analyzer for modules, packages, APIs, layers, persistence, tests and build conventions | Repository fixture analysis and planning API tests | Inspect repository map, source manifest and analysis hash | COMPLETE-C3 |
+| REQ-4A | Orchestrate the full SDLC using an explicit dependency graph | Validated planning graph in C3; execution scheduler in C7 | Graph shape/cycle/reachability tests in C3; scheduling tests C7 | Persisted graph and hashes; state history in C7 | PARTIAL-C3 |
 | REQ-4B | Sequential and parallel paths with synchronization | Task dependency contract; barriers in C7 | Parallel/barrier tests in C7 | Scenario execution timeline | PLANNED-C7 |
 | REQ-4C | Entry/exit gates and cross-stage context | CompletionEvidence enforces exit gate; gate engine in C7 | Missing gate rejection in C1; gate tests C7 | Policy and gate decisions | PARTIAL-C1 |
 | REQ-4D | Preserve decision lineage and re-plan changed upstream work | Revision/audit contracts; replanner in C7 | Approval invalidation/replan tests C7 | Revision lineage and invalidated hashes | PLANNED-C7 |
@@ -29,7 +29,7 @@ This living matrix maps every official assignment requirement to planned impleme
 | DEL-6 | Setup instructions | Commit-specific setup in README | Wrapper verification | Follow README on clean machine | PARTIAL-C1 |
 | DEL-7 | Testing approach, limitations and trade-offs | Verification/coverage docs finalized C10 | Full reactor verification | Reviewer guide/manual acceptance | PLANNED-C10 |
 | QUAL-1 | Modular, testable, reliable, secure and scalable design | Package boundaries, immutable contracts and migration baseline | Foundation tests | Build, health and schema evidence | PARTIAL-C1 |
-| QUAL-2 | Safe change management and engineering judgment | Isolated workspace/recovery contracts; governed patching C5 | Policy, hash and rollback tests | Manifests, diffs and approvals | PARTIAL-C1 |
+| QUAL-2 | Safe change management and engineering judgment | Approved-root tools, bounded access, isolated revision workspace, manifests, diff and verified rollback; governed patching C5 | Traversal/symlink/limit, manifest/diff/rollback/discard tests | Inspect workspace baseline and hashes; patch approval follows in C5 | PARTIAL-C3 |
 
 ## Commit 1 evidence checklist
 
@@ -50,3 +50,12 @@ This living matrix maps every official assignment requirement to planned impleme
 - Missing answers and invalid operator credentials are rejected without creating a revision.
 - Accepted clarification creates revision 2 with a parent revision, actor and answer lineage.
 - Requirement-derived outputs are invalidated and regenerated; repository-derived evidence is reused with an explicit source ID.
+
+## Commit 3 evidence checklist
+
+- Approved-root repository tools reject absolute paths, traversal, symbolic-link escapes, unsupported files and configured bounds.
+- Each workflow revision receives an isolated repository copy and content-addressed baseline snapshot; failed planning discards its revision workspace.
+- Repository analysis identifies modules, packages, APIs, architecture layers, persistence, migrations, tests, build conventions and acceptance-criterion impact.
+- Structurally different requirements produce different implementation and test tasks instead of a fixed template.
+- Plan validation rejects duplicate tasks, unknown roles, missing/self dependencies, cycles, unreachable tasks and missing validation, risk, release-readiness or approval gates.
+- Planning persists immutable analysis and plan JSON with hashes, then advances the workflow to `AWAITING_CHANGE_APPROVAL`.

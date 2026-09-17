@@ -39,3 +39,19 @@ Run verification:
 Clarification is submitted to `POST /api/v1/workflows/{workflowId}/clarifications` with `X-Operator-Id` and `X-Operator-Token`. For local development the token defaults to `local-operator-token`; set `AGENTIC_CLARIFICATION_TOKEN` outside local development. A complete clarification creates a child revision, invalidates requirement-derived outputs, reuses unaffected repository-derived evidence, and reruns interpretation asynchronously.
 
 Caller-provided execution state, completion output, validation, or artifacts remain rejected.
+
+## Repository planning API
+
+`POST /api/v1/workflows/{workflowId}/plan` is available after a clear requirement reaches `PLANNING`. It copies the submitted repository into an isolated revision workspace, records a content-addressed baseline manifest, analyzes brownfield structure and data flow, and persists a validated dependency plan before advancing to `AWAITING_CHANGE_APPROVAL`.
+
+Repositories must be below an explicitly approved root. The local default is `./scenario-repositories`; configure one or more roots with `AGENTIC_REPOSITORY_APPROVED_ROOTS`. Repository access rejects absolute/traversal paths, symbolic-link escapes, unsupported files, and configured size, file-count, and search-result limit violations.
+
+Example after polling a workflow to `PLANNING`:
+
+```powershell
+$plan = Invoke-RestMethod -Method Post `
+  -Uri "http://localhost:8080/api/v1/workflows/$workflowId/plan"
+$plan.status
+$plan.repositoryMap
+$plan.plan.tasks
+```
