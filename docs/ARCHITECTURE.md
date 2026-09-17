@@ -71,3 +71,15 @@ Every specialist invocation records workflow, revision, task, agent role, provid
 Model output for implementation, test generation and repair uses the `file-operation-proposal` schema. Operations are limited to `CREATE`, `UPDATE` and `DELETE`, with complete replacement content for writes and expected content hashes for updates/deletes. The same validated proposal object is persisted and handed to the applier for deterministic and OpenAI providers.
 
 Before mutation, the patch engine validates every operation, including normalized relative paths, symbolic-link components, permitted roots/extensions, duplicate paths, traceability fields, operation count, total bytes and optimistic hashes. Writes use same-directory temporary files and atomic replacement where supported. Any failure restores the baseline snapshot and verifies its manifest.
+
+## Durable coordination
+
+PostgreSQL is the coordination authority. A task claim contains one worker owner, lease expiry, heartbeat, and monotonically increasing fencing token. Claims and takeovers use row locks in a transaction. Completion requires the current unexpired worker/token pair and records a unique effect key before changing task state, so stale workers cannot commit and retries cannot duplicate an effect. Startup and scheduled recovery remove expired claims and return only abandoned `RUNNING` tasks to `READY`; clarification and approval waits remain paused.
+
+The Compose topology runs two non-root orchestrators against the same PostgreSQL database and workspace volume. This demonstrates shared durable state and secondary-instance continuation; it is not a substitute for deployment-platform storage qualification.
+
+## Security and operations
+
+Health probes are public. Local API and Prometheus access use Basic authentication with role checks. The `prod` profile replaces local users with an OIDC JWT resource server and maps the `roles` claim to operator and approver authorities. Credentials are environment/config-tree inputs, model credentials are removed from build subprocesses, and TLS can be configured directly or terminated at a trusted forwarding proxy.
+
+Micrometer records workflow, validation, recovery, repair, model, and lease events. Audit-grade details remain in the durable ledgers; computed success, retry, rollback, repair, validation, model-failure, MTTR, and p95 latency indicators are defined as PromQL in `docs/OBSERVABILITY.md`.

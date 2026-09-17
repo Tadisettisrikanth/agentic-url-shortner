@@ -1,6 +1,6 @@
 # Agentic URL Shortner
 
-This repository is a governed agentic software-engineering platform demonstrated through URL-shortener scenarios. The current implementation provides the Java 21 foundation, durable schema, execution contracts, asynchronous requirement interpretation, ambiguity handling, authenticated clarification, and revision lineage. Later commits connect those requirements to repository analysis, generated source and tests, real validation, repair, governance, and release readiness.
+This repository is a governed agentic software-engineering platform demonstrated through URL-shortener scenarios. It turns submitted requirements into repository analysis, a dynamic plan, specialist outputs, generated source and tests, governed isolated changes, real Maven validation, bounded repair, evidence-derived outcomes, and exact-hash human approvals.
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ docker compose up -d postgres
 .\mvnw.cmd spring-boot:run
 ```
 
-The default database settings can be overridden with `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD`. The application listens on `8080`.
+The default database settings can be overridden with `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD`. The application listens on `8080`. Local API access uses HTTP Basic authentication with `operator` / `local-development-only`; replace both through `AGENTIC_BASIC_USERNAME` and `AGENTIC_BASIC_PASSWORD`.
 
 Verify health:
 
@@ -97,3 +97,21 @@ Compiler, test, and configuration failures are supplied with bounded current sou
 Change approval requires `POST /api/v1/workflows/{id}/approvals/change` with the exact current plan hash and `X-Change-Approver-Token`. After real validation, `POST /outcome` builds criterion-level traceability from persisted production paths, test paths, artifact hashes, and validation attempts. Release approval requires that exact outcome hash and `X-Release-Approver-Token`; incomplete evidence cannot become `RELEASE_READY`. Operators may request a safe stop through `POST /cancel`.
 
 Generated URL-shortener behavior is connected to `POST /urls`, `GET /{code}`, and `GET /urls/{code}/analytics`. See `docs/SCENARIOS.md` for greenfield, brownfield, ambiguity, repair, safe-stop, and rollback runs.
+
+## Durable execution and packaged review
+
+Flyway V8 adds transactional task claims, expiring leases, heartbeat timestamps, monotonically increasing fencing tokens, and idempotent completion effects. Recovery runs at startup and on a schedule; it requeues only expired `RUNNING` tasks and preserves clarification/approval pauses. Two Compose orchestrators share PostgreSQL and workspace storage on ports 8080 and 8081.
+
+```powershell
+.\mvnw.cmd clean verify
+docker compose config --quiet
+docker compose up -d --build
+.\demo.ps1 greenfield
+.\demo.ps1 brownfield
+.\demo.ps1 ambiguous
+.\demo.ps1 repair
+.\demo.ps1 safe-stop
+.\demo.ps1 failover
+```
+
+See [docs/REVIEWER-GUIDE.md](docs/REVIEWER-GUIDE.md), [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md), and [docs/PRODUCTION-DEPLOYMENT.md](docs/PRODUCTION-DEPLOYMENT.md). Production mode uses OIDC/JWT role mapping and optional application TLS; this repository does not claim an externally deployed production environment.

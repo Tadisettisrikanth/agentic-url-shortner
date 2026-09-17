@@ -26,6 +26,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
+import com.srikanth.agenticurlshortner.observability.PlatformMetrics;
+import java.time.Duration;
 
 @Service
 public class GovernanceService {
@@ -37,13 +39,15 @@ public class GovernanceService {
     private final GovernanceProperties properties;
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
+    private final PlatformMetrics metrics;
 
     public GovernanceService(WorkflowRepository workflows, WorkflowRevisionRepository revisions,
                              EngineeringPlanRepository plans, RequirementAnalysisRepository analyses,
                              RequirementItemRepository items, GovernanceProperties properties,
-                             JdbcTemplate jdbc, ObjectMapper mapper) {
+                             JdbcTemplate jdbc, ObjectMapper mapper, PlatformMetrics metrics) {
         this.workflows = workflows; this.revisions = revisions; this.plans = plans; this.analyses = analyses;
         this.items = items; this.properties = properties; this.jdbc = jdbc; this.mapper = mapper;
+        this.metrics = metrics;
     }
 
     public ApprovalResponse approveChange(UUID workflowId, String hash, String token, String approver) {
@@ -136,6 +140,8 @@ public class GovernanceService {
         jdbc.update("update agent_tasks set state='COMPLETED', updated_at=? where revision_id=? and task_key='plan-release-approval'",
                 Timestamp.from(Instant.now()), current.revision().getId());
         audit(current, "RELEASE_APPROVED", approver, "exact current outcome hash approved");
+        metrics.workflowOutcome(WorkflowStatus.RELEASE_READY.name(),
+                Duration.between(current.workflow().getCreatedAt(), Instant.now()));
         return new ApprovalResponse("RELEASE", "APPROVED", WorkflowStatus.RELEASE_READY.name(), hash);
     }
 
@@ -150,6 +156,8 @@ public class GovernanceService {
         jdbc.update("update agent_tasks set state='CANCELLED', updated_at=? where revision_id=? and state not in ('COMPLETED','FAILED','ROLLED_BACK')",
                 Timestamp.from(Instant.now()), current.revision().getId());
         audit(current, "WORKFLOW_CANCELLED", operator, "operator requested safe stop");
+        metrics.workflowOutcome(WorkflowStatus.SAFE_STOPPED.name(),
+                Duration.between(current.workflow().getCreatedAt(), Instant.now()));
         return new ApprovalResponse("CANCELLATION", "APPROVED", WorkflowStatus.SAFE_STOPPED.name(), "none");
     }
 

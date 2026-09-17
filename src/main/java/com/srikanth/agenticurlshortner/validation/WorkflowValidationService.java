@@ -15,8 +15,10 @@ import com.srikanth.agenticurlshortner.workflow.domain.WorkflowStatus;
 import com.srikanth.agenticurlshortner.workflow.persistence.WorkflowRepository;
 import com.srikanth.agenticurlshortner.workflow.persistence.WorkflowRevisionRepository;
 import com.srikanth.agenticurlshortner.governance.GovernanceService;
+import com.srikanth.agenticurlshortner.observability.PlatformMetrics;
 import java.nio.file.Path;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,13 +41,14 @@ public class WorkflowValidationService {
     private final ValidationProperties validationProperties;
     private final JdbcTemplate jdbc;
     private final GovernanceService governance;
+    private final PlatformMetrics metrics;
 
     public WorkflowValidationService(WorkflowRepository workflows, WorkflowRevisionRepository revisions,
                                      RepositoryAnalysisRepository analyses, FixedMavenCapabilityTool tool,
                                      RepairCoordinator repairs, AgenticExecutionProperties execution,
                                      RepositoryToolProperties repositoryProperties,
                                      ValidationProperties validationProperties, JdbcTemplate jdbc,
-                                     GovernanceService governance) {
+                                     GovernanceService governance, PlatformMetrics metrics) {
         this.workflows = workflows;
         this.revisions = revisions;
         this.analyses = analyses;
@@ -56,6 +59,7 @@ public class WorkflowValidationService {
         this.validationProperties = validationProperties;
         this.jdbc = jdbc;
         this.governance = governance;
+        this.metrics = metrics;
     }
 
     public ValidationOutcome validate(UUID workflowId) {
@@ -81,6 +85,7 @@ public class WorkflowValidationService {
             UUID attemptId = startAttempt(taskId, persistedAttemptNumber);
             BuildEvidence build = tool.execute(workspace, MavenCapability.CLEAN_VERIFY);
             if (build.exitCode() == 0 && !build.timedOut()) {
+                metrics.validation("success");
                 completeAttempt(attemptId, build, "SUCCEEDED", RecoveryDecision.NONE, "real clean verify passed", null);
                 attempts.add(new ValidationAttemptEvidence(attemptId, persistedAttemptNumber, build, RecoveryDecision.NONE,
                         "real clean verify passed", null));
@@ -113,6 +118,8 @@ public class WorkflowValidationService {
             }
             completeAttempt(attemptId, build, build.timedOut() ? "TIMED_OUT" : "FAILED", decision, reason,
                     repairId.orElse(null));
+            metrics.validation("failure");
+            metrics.recovery(decision.name(), build.duration());
             attempts.add(new ValidationAttemptEvidence(attemptId, persistedAttemptNumber, build, decision, reason, repairId.orElse(null)));
             audit(workflowId, revision.getId(), taskId, "VALIDATION_FAILED",
                     "attempt=" + number + ",classification=" + build.classification() + ",decision=" + decision);
@@ -135,6 +142,7 @@ public class WorkflowValidationService {
                 UUID.randomUUID(), revision.getId(), "validation attempts exhausted", rollback.expectedManifestHash(),
                 rollback.actualManifestHash(), rollback.restored(), Timestamp.from(Instant.now()));
         workflow.transition(rollback.restored() ? WorkflowStatus.ROLLED_BACK : WorkflowStatus.FAILED, Instant.now());
+        metrics.workflowOutcome(workflow.getStatus().name(), Duration.between(workflow.getCreatedAt(), Instant.now()));
         revision.transition(workflow.getStatus());
         workflows.save(workflow);
         revisions.save(revision);

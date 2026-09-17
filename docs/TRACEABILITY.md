@@ -1,6 +1,6 @@
 # Assignment Traceability
 
-This living matrix maps every official assignment requirement to planned implementation, tests, runtime evidence, and reviewer steps. A row is complete only when all four columns contain verified current-revision evidence. Commit 1 establishes contracts and foundations; later rows intentionally remain `PLANNED`.
+This matrix maps every official assignment requirement to implementation, tests, runtime evidence, and reviewer steps. A row is complete only when all four columns contain verified current-revision evidence.
 
 | ID | Requirement | Implementation | Automated tests | Runtime evidence / reviewer step | Status |
 |---|---|---|---|---|---|
@@ -15,19 +15,19 @@ This living matrix maps every official assignment requirement to planned impleme
 | REQ-4E | Human approval for high-impact actions | Authenticated change/release/operator gates with exact evidence hashes | Wrong token, stale hash and successful gate tests | Approval and audit ledgers | COMPLETE-C7 |
 | REQ-4F | Bounded retry, fallback, rollback and safe stop | Classified bounded repair, authenticated safe stop and verified baseline rollback | Repair, retry, cancellation and terminal rollback tests | Persisted attempts, decisions, audits and manifest evidence | COMPLETE-C7 |
 | REQ-4G | Security, compliance and change-control policy guardrails | Repository, patch, secret, approval, no-push and no-deployment policies | Policy enforcement and approval authentication tests | Inspect policy decision and approval ledgers | COMPLETE-C7 |
-| REQ-4H | Audit-grade observability and traceability | Specialist invocation ledger records role/provider/model/input hashes/output hash/decisions/risks/duration/artifacts; broader audit and metrics C9 | V4 migration and planning persistence assertions | Query current revision invocation and artifact rows | PARTIAL-C4 |
-| REQ-4I | Success, retry/rollback, MTTR and latency metrics | Actuator/Prometheus foundation; meters C9 | Meter/PromQL tests C9 | Prometheus queries and dashboards | PARTIAL-C1 |
+| REQ-4H | Audit-grade observability and traceability | Invocation, attempts, artifacts, policies, approvals, audits, claims, outcomes and criterion lineage | Migration, orchestration and coordination assertions | Query ledgers through the current revision | COMPLETE-C8 |
+| REQ-4I | Success, retry/rollback, MTTR and latency metrics | Micrometer counters/timers plus exact computed PromQL | Execution paths and registry assertions | `/actuator/prometheus` and `docs/OBSERVABILITY.md` | COMPLETE-C8 |
 | REQ-5 | Production code, API/schema, unit/integration tests and documentation | Connected URL service/controller plus generated unit and HTTP tests; scenario documentation | Generated behavior tests execute under real Maven | Persisted files, diff and successful build logs | COMPLETE-C7 |
 | REQ-6 | Risks, trade-offs, failure scenarios and safety validation | Risk review, policy ledger, real validation, classified repair and verified rollback | Success, repair, credential removal, safe-stop and rollback tests | Attempt output, repair lineage, audits and rollback records | COMPLETE-C7 |
 | REQ-7 | Controlled autonomy with human oversight | Caller cannot complete tasks; approval contracts | API and completion-evidence tests C1 | Reject manual completion request | COMPLETE-C1 |
-| REQ-8 | Final summary with rationale, artifacts, risks and limitations | Runtime engineering-outcome generator and criterion traceability; final static reviewer report C8 | Evidence-derived outcome and stale approval tests | Outcome API now; `docs/ENGINEERING-OUTCOME.md` in C8 | PARTIAL-C7 |
-| DEL-1 | Runnable end-to-end prototype | Java 21/Spring Boot/PostgreSQL/Flyway foundation | Context, migration and health tests | Start Compose/app and query health | PARTIAL-C1 |
-| DEL-2 | Architecture overview and key decisions | `docs/ARCHITECTURE.md` documents boundaries, flow, agents, trust and evidence | Model boundary and orchestration integration tests | Reviewer architecture walkthrough | PARTIAL-C4 |
+| REQ-8 | Final summary with rationale, artifacts, risks and limitations | Runtime engineering outcome plus documented provenance and limitations | Evidence-derived outcome and stale approval tests | Outcome API and `docs/ENGINEERING-OUTCOME.md` | COMPLETE-C8 |
+| DEL-1 | Runnable end-to-end prototype | Java 21/Spring Boot/PostgreSQL/Flyway, two containers and API demos | Context, eight migrations, health and end-to-end tests | Compose and scenario demos | COMPLETE-C8 |
+| DEL-2 | Architecture overview and key decisions | Architecture documents control/execution planes, agents, trust, governance and evidence | Model, orchestration and coordination tests | Reviewer architecture walkthrough | COMPLETE-C8 |
 | DEL-3 | Greenfield scenario | Agent-generated entry point, service, controller, unit and HTTP tests for build-only seed | Generated unit/HTTP tests executed by real Maven | Scenario workflow evidence and generated diff | COMPLETE-C7 |
 | DEL-4 | Brownfield scenario | Integrated alias, expiry and UTC analytics HTTP enhancement | Generated service and HTTP behavioral tests | Scenario workflow evidence and generated diff | COMPLETE-C7 |
 | DEL-5 | Ambiguous scenario | Clarification/revision pipeline, mutation guard and downstream generated feature | No-mutation, authentication, revision lineage, invalidation and end-to-end tests | Clarify revision 1, then plan/apply/validate revision 2 | COMPLETE-C7 |
-| DEL-6 | Setup instructions | Commit-specific setup in README | Wrapper verification | Follow README on clean machine | PARTIAL-C1 |
-| DEL-7 | Testing approach, limitations and trade-offs | Verification/coverage docs finalized C10 | Full reactor verification | Reviewer guide/manual acceptance | PLANNED-C10 |
+| DEL-6 | Setup instructions | README, deployment guide and reviewer guide | Wrapper and packaged build verification | Follow reviewer guide | COMPLETE-C8 |
+| DEL-7 | Testing approach, limitations and trade-offs | Manual acceptance, outcome and production deployment documents | Full Maven verification and JaCoCo gate | Reviewer guide/manual acceptance | COMPLETE-C8 |
 | QUAL-1 | Modular, testable, reliable, secure and scalable design | Bounded package contracts, durable evidence, isolated workspaces and role-separated governance | Full integration, security boundary, recovery and schema tests | Build, scenario, audit and traceability evidence | COMPLETE-C7 |
 | QUAL-2 | Safe change management and engineering judgment | Approved-root tools, isolated workspace, exact provider proposals, patch policies, optimistic locking, atomic writes, manifests/diffs and verified rollback | CREATE/UPDATE/DELETE, traversal, root/type/duplicate/size/stale-hash and mid-patch rollback tests | Apply by exact plan hash and inspect persisted proposal-to-operation lineage | COMPLETE-C5 |
 

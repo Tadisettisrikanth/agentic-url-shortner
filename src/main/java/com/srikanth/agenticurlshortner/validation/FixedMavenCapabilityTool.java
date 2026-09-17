@@ -47,6 +47,7 @@ public class FixedMavenCapabilityTool {
         Path wrapper = workspace.resolve(windows ? "mvnw.cmd" : "mvnw");
         List<String> command = new ArrayList<>();
         if (windows) { command.add("cmd.exe"); command.add("/d"); command.add("/c"); }
+        else { command.add("sh"); }
         command.add(wrapper.toAbsolutePath().toString());
         command.add("--batch-mode");
         command.add("--no-transfer-progress");
