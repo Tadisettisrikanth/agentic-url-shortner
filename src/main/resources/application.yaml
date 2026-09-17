@@ -67,3 +67,7 @@ agentic:
     timeout: ${AGENTIC_VALIDATION_TIMEOUT:PT5M}
     max-output-characters: ${AGENTIC_VALIDATION_MAX_OUTPUT_CHARS:65536}
     retry-backoff: ${AGENTIC_VALIDATION_RETRY_BACKOFF:PT0.1S}
+  governance:
+    operator-token: ${AGENTIC_OPERATOR_TOKEN:local-operator-token}
+    change-approver-token: ${AGENTIC_CHANGE_APPROVER_TOKEN:local-change-approver-token}
+    release-approver-token: ${AGENTIC_RELEASE_APPROVER_TOKEN:local-release-approver-token}

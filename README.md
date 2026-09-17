@@ -91,3 +91,9 @@ Commit 5 proves the provider-to-proposal-to-applied-diff chain with compiled-sou
 `POST /api/v1/workflows/{workflowId}/validate` runs only the fixed Maven Wrapper `clean verify` capability in the isolated revision workspace. The child process receives no model/API credentials. Exit code, duration, timeout, bounded output, failure classification, discovered tests, coverage availability, recovery decision, and audit events are persisted for every attempt.
 
 Compiler, test, and configuration failures are supplied with bounded current source, prior proposal, and hashes to the repair agent. Any returned repair uses the same structured operation policies and governed applier as the original change. Transient dependency, infrastructure, and timeout failures use bounded retry/backoff. Missing safe repairs stop for human intervention; exhausted or non-retryable failures restore and verify the baseline before entering `ROLLED_BACK` or `FAILED`.
+
+## Governance and release outcome
+
+Change approval requires `POST /api/v1/workflows/{id}/approvals/change` with the exact current plan hash and `X-Change-Approver-Token`. After real validation, `POST /outcome` builds criterion-level traceability from persisted production paths, test paths, artifact hashes, and validation attempts. Release approval requires that exact outcome hash and `X-Release-Approver-Token`; incomplete evidence cannot become `RELEASE_READY`. Operators may request a safe stop through `POST /cancel`.
+
+Generated URL-shortener behavior is connected to `POST /urls`, `GET /{code}`, and `GET /urls/{code}/analytics`. See `docs/SCENARIOS.md` for greenfield, brownfield, ambiguity, repair, safe-stop, and rollback runs.

@@ -13,7 +13,7 @@ public interface FileOperationProposalAgent {
 
     record ProposalContext(String requirementId, String normalizedRequirement,
                            List<String> acceptanceCriterionIds, String requirementHash,
-                           String repositoryAnalysisHash, String planHash) {
+                           String repositoryAnalysisHash, String planHash, String workspaceLocation) {
         public ProposalContext { acceptanceCriterionIds = List.copyOf(acceptanceCriterionIds); }
     }
 

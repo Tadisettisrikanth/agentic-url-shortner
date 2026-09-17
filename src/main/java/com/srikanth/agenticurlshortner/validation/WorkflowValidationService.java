@@ -14,6 +14,7 @@ import com.srikanth.agenticurlshortner.validation.BuildModels.ValidationOutcome;
 import com.srikanth.agenticurlshortner.workflow.domain.WorkflowStatus;
 import com.srikanth.agenticurlshortner.workflow.persistence.WorkflowRepository;
 import com.srikanth.agenticurlshortner.workflow.persistence.WorkflowRevisionRepository;
+import com.srikanth.agenticurlshortner.governance.GovernanceService;
 import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -37,12 +38,14 @@ public class WorkflowValidationService {
     private final RepositoryToolProperties repositoryProperties;
     private final ValidationProperties validationProperties;
     private final JdbcTemplate jdbc;
+    private final GovernanceService governance;
 
     public WorkflowValidationService(WorkflowRepository workflows, WorkflowRevisionRepository revisions,
                                      RepositoryAnalysisRepository analyses, FixedMavenCapabilityTool tool,
                                      RepairCoordinator repairs, AgenticExecutionProperties execution,
                                      RepositoryToolProperties repositoryProperties,
-                                     ValidationProperties validationProperties, JdbcTemplate jdbc) {
+                                     ValidationProperties validationProperties, JdbcTemplate jdbc,
+                                     GovernanceService governance) {
         this.workflows = workflows;
         this.revisions = revisions;
         this.analyses = analyses;
@@ -52,6 +55,7 @@ public class WorkflowValidationService {
         this.repositoryProperties = repositoryProperties;
         this.validationProperties = validationProperties;
         this.jdbc = jdbc;
+        this.governance = governance;
     }
 
     public ValidationOutcome validate(UUID workflowId) {
@@ -84,6 +88,7 @@ public class WorkflowValidationService {
                 revision.transition(WorkflowStatus.AWAITING_RELEASE_APPROVAL);
                 workflows.save(workflow);
                 revisions.save(revision);
+                governance.validationPassed(revision.getId());
                 finishTask(taskId, "COMPLETED", attempts.size());
                 audit(workflowId, revision.getId(), taskId, "VALIDATION_SUCCEEDED", "attempt=" + number);
                 return new ValidationOutcome(workflowId, revision.getId(), workflow.getStatus().name(), attempts,

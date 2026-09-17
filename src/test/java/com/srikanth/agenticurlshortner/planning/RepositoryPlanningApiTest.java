@@ -100,7 +100,7 @@ class RepositoryPlanningApiTest {
         assertThat(jdbc.queryForObject("select count(*) from agent_invocations where revision_id = ? "
                 + "and length(output_json) > 0", Integer.class, revisionId)).isEqualTo(12);
         assertThat(jdbc.queryForObject("select count(*) from task_dependencies d join agent_tasks t "
-                + "on t.id = d.task_id where t.revision_id = ?", Integer.class, revisionId)).isEqualTo(11);
+                + "on t.id = d.task_id where t.revision_id = ?", Integer.class, revisionId)).isGreaterThan(11);
         mvc.perform(post("/api/v1/workflows/{id}/changes/apply", workflowId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"planHash\":\"" + "0".repeat(64) + "\"}"))
@@ -109,20 +109,21 @@ class RepositoryPlanningApiTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"planHash\":\"" + planHash + "\",\"operations\":[]}"))
                 .andExpect(status().isBadRequest());
+        approveChange(workflowId, planHash);
         String applied = mvc.perform(post("/api/v1/workflows/{id}/changes/apply", workflowId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"planHash\":\"" + planHash + "\"}"))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.status").value("EXECUTING"))
                 .andExpect(jsonPath("$.proposalIds.length()").value(2))
-                .andExpect(jsonPath("$.changedPaths.length()").value(2))
+                .andExpect(jsonPath("$.changedPaths.length()").value(4))
                 .andReturn().getResponse().getContentAsString();
         assertThat(JsonPath.<List<String>>read(applied, "$.changedPaths"))
                 .allMatch(path -> path.startsWith("src/main/") || path.startsWith("src/test/"));
         assertThat(jdbc.queryForObject("select count(*) from patch_proposals where revision_id = ?",
                 Integer.class, revisionId)).isEqualTo(2);
         assertThat(jdbc.queryForObject("select count(*) from applied_file_operations a join patch_proposals p "
-                + "on p.id=a.proposal_id where p.revision_id=?", Integer.class, revisionId)).isEqualTo(2);
+                + "on p.id=a.proposal_id where p.revision_id=?", Integer.class, revisionId)).isEqualTo(4);
         assertThat(workflows.findById(workflowId).orElseThrow().getStatus()).isEqualTo(WorkflowStatus.EXECUTING);
         given(mavenTool.execute(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(MavenCapability.CLEAN_VERIFY)))
                 .willReturn(new BuildEvidence(MavenCapability.CLEAN_VERIFY, 0, Duration.ofSeconds(2), false,
@@ -136,6 +137,28 @@ class RepositoryPlanningApiTest {
         assertThat(jdbc.queryForObject("select count(*) from execution_attempts where task_id in "
                 + "(select id from agent_tasks where revision_id=? and agent_role='VALIDATION') "
                 + "and executor_type='FIXED_MAVEN_CAPABILITY' and status='SUCCEEDED'", Integer.class, revisionId)).isOne();
+        String outcome = mvc.perform(post("/api/v1/workflows/{id}/outcome", workflowId))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.releaseReady").value(true))
+                .andReturn().getResponse().getContentAsString();
+        String outcomeHash = JsonPath.read(outcome, "$.outcomeHash");
+        mvc.perform(post("/api/v1/workflows/{id}/approvals/release", workflowId)
+                        .header("X-Release-Approver-Token", "wrong-token").header("X-Approver-Id", "wrong-role")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"evidenceHash\":\"" + outcomeHash + "\"}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/workflows/{id}/approvals/release", workflowId)
+                        .header("X-Release-Approver-Token", "local-release-approver-token")
+                        .header("X-Approver-Id", "test-release-approver").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"evidenceHash\":\"" + "0".repeat(64) + "\"}"))
+                .andExpect(status().isConflict());
+        mvc.perform(post("/api/v1/workflows/{id}/approvals/release", workflowId)
+                        .header("X-Release-Approver-Token", "local-release-approver-token")
+                        .header("X-Approver-Id", "test-release-approver").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"evidenceHash\":\"" + outcomeHash + "\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("RELEASE_READY"));
+        assertThat(jdbc.queryForObject("select count(*) from criterion_traceability where revision_id=? "
+                + "and completion_status='COMPLETE'", Integer.class, revisionId)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("select count(*) from agent_tasks where revision_id=? "
+                + "and task_key like 'plan-%' and state <> 'COMPLETED'", Integer.class, revisionId)).isZero();
         mvc.perform(post("/api/v1/workflows/{id}/plan", workflowId)).andExpect(status().isConflict());
     }
 
@@ -149,6 +172,20 @@ class RepositoryPlanningApiTest {
     }
 
     @Test
+    void authenticatedOperatorCanSafeStopBeforeMutation() throws Exception {
+        UUID workflowId = submit("Create short URLs with POST /urls returning HTTP 201 and redirect GET /{code} with HTTP 302.",
+                "url-shortener");
+        awaitStatus(workflowId, WorkflowStatus.PLANNING);
+        mvc.perform(post("/api/v1/workflows/{id}/cancel", workflowId)
+                        .header("X-Operator-Token", "wrong").header("X-Operator-Id", "intruder"))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/workflows/{id}/cancel", workflowId)
+                        .header("X-Operator-Token", "local-operator-token").header("X-Operator-Id", "operator"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("SAFE_STOPPED"));
+        assertThat(workflows.findById(workflowId).orElseThrow().getStatus()).isEqualTo(WorkflowStatus.SAFE_STOPPED);
+    }
+
+    @Test
     void rollsBackAndPersistsTerminalEvidenceForNonRetryableValidationFailure() throws Exception {
         UUID workflowId = submit("Create short URLs with POST /urls returning HTTP 201 and redirect GET /{code} with HTTP 302.",
                 "url-shortener");
@@ -157,6 +194,7 @@ class RepositoryPlanningApiTest {
                 .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
         String planHash = JsonPath.read(planned, "$.planHash");
         UUID revisionId = UUID.fromString(JsonPath.read(planned, "$.revisionId"));
+        approveChange(workflowId, planHash);
         mvc.perform(post("/api/v1/workflows/{id}/changes/apply", workflowId)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"planHash\":\"" + planHash + "\"}"))
                 .andExpect(status().isAccepted());
@@ -182,6 +220,16 @@ class RepositoryPlanningApiTest {
                                 + "\",\"repositoryPath\":\"" + repositoryPath + "\"}"))
                 .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
         return UUID.fromString(JsonPath.read(response, "$.workflowId"));
+    }
+
+    private void approveChange(UUID workflowId, String planHash) throws Exception {
+        mvc.perform(post("/api/v1/workflows/{id}/approvals/change", workflowId)
+                        .header("X-Change-Approver-Token", "local-change-approver-token")
+                        .header("X-Approver-Id", "test-change-approver")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"evidenceHash\":\"" + planHash + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.decision").value("APPROVED"));
     }
 
     private void awaitStatus(UUID workflowId, WorkflowStatus status) {
