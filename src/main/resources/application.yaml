@@ -63,3 +63,7 @@ agentic:
       - src/main
       - src/test
       - docs
+  validation:
+    timeout: ${AGENTIC_VALIDATION_TIMEOUT:PT5M}
+    max-output-characters: ${AGENTIC_VALIDATION_MAX_OUTPUT_CHARS:65536}
+    retry-backoff: ${AGENTIC_VALIDATION_RETRY_BACKOFF:PT0.1S}

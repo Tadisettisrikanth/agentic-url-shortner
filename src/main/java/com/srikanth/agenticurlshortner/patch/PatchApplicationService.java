@@ -132,6 +132,23 @@ public class PatchApplicationService {
         }
     }
 
+    public UUID applyRepairProposal(UUID revisionId, AgentPatchProposal proposal) {
+        if (!"REPAIR".equals(proposal.agentRole())) throw new PatchPolicyException("repair proposal must use REPAIR role");
+        var repositoryAnalysis = repositoryAnalyses.findByRevisionId(revisionId).orElseThrow();
+        Path repository = Path.of(repositoryAnalysis.getWorkspaceLocation());
+        Path baseline = repository.getParent().resolve("snapshots").resolve("baseline");
+        RepositoryWorkspaceService workspaces = new RepositoryWorkspaceService(
+                executionProperties.workspaceRoot(), repositoryProperties);
+        GovernedPatchApplier applier = new GovernedPatchApplier(repository, baseline, workspaces,
+                repositoryProperties, patchProperties);
+        String proposalJson = serialize(proposal);
+        String proposalHash = sha256(proposalJson);
+        PatchApplicationResult result = applier.apply(proposal, proposalHash,
+                repositoryAnalysis.getBaselineManifestHash());
+        persist(revisionId, proposal, proposalJson, result, repositoryAnalysis.getBaselineManifestHash());
+        return proposal.id();
+    }
+
     private void persist(UUID revisionId, AgentPatchProposal proposal, String json,
                          PatchApplicationResult result, String baselineHash) {
         Instant now = Instant.now();

@@ -10,6 +10,7 @@ import com.srikanth.agenticurlshortner.patch.PatchModels.FileOperationType;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -43,6 +44,24 @@ public final class ModelFileOperationProposalAgent implements FileOperationPropo
                 context.requirementId(), context.acceptanceCriterionIds(), "test-generation-" + suffix, inputHashes);
         return List.of(invoke("IMPLEMENTATION", production, context),
                 invoke("TEST_GENERATION", test, context));
+    }
+
+    @Override
+    public Optional<AgentPatchProposal> proposeRepair(RepairProposalContext context) {
+        if (properties.provider().equalsIgnoreCase("deterministic")) return Optional.empty();
+        Map<String, Object> modelContext = new LinkedHashMap<>();
+        modelContext.put("objective", "Correct the real compiler or test failure without unrelated changes");
+        modelContext.put("failureEvidence", context.boundedFailureEvidence());
+        modelContext.put("relevantSources", context.relevantSources());
+        modelContext.put("priorProposal", context.priorProposalJson());
+        var response = gateway.generateRaw(new ModelRequest("REPAIR", "file_operation_proposal",
+                "Return only a corrected structured patch. Every UPDATE or DELETE must use the supplied current SHA-256. "
+                        + "Preserve requirement, acceptance-criterion and input-hash lineage.",
+                modelContext, properties.maxOutputCharacters()));
+        GeneratedOperations generated = deserialize(response.structuredOutput());
+        if (generated.operations().isEmpty()) return Optional.empty();
+        return Optional.of(new AgentPatchProposal(UUID.randomUUID(), "REPAIR", response.provider(), response.model(),
+                generated.operations()));
     }
 
     private AgentPatchProposal invoke(String role, FileOperation suggested, ProposalContext context) {

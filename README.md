@@ -85,3 +85,9 @@ $changes.unifiedDiff
 The endpoint moves a successful workflow to `EXECUTING`. Implementation and test agents return the operations applied by the controlled patch engine; there is no separate hardcoded writer. Each operation carries requirement, criterion, task and input-hash lineage. Policies enforce isolated-workspace paths, permitted roots/types, operation and byte limits, duplicate rejection, optimistic hashes, atomic replacement, manifests, diffs and verified rollback.
 
 Commit 5 proves the provider-to-proposal-to-applied-diff chain with compiled-source-set traceability contracts. Complete requirement-specific URL-shortener scenario generation is delivered in commit 8; real compiler/test execution begins in commit 6.
+
+## Real validation and recovery
+
+`POST /api/v1/workflows/{workflowId}/validate` runs only the fixed Maven Wrapper `clean verify` capability in the isolated revision workspace. The child process receives no model/API credentials. Exit code, duration, timeout, bounded output, failure classification, discovered tests, coverage availability, recovery decision, and audit events are persisted for every attempt.
+
+Compiler, test, and configuration failures are supplied with bounded current source, prior proposal, and hashes to the repair agent. Any returned repair uses the same structured operation policies and governed applier as the original change. Transient dependency, infrastructure, and timeout failures use bounded retry/backoff. Missing safe repairs stop for human intervention; exhausted or non-retryable failures restore and verify the baseline before entering `ROLLED_BACK` or `FAILED`.

@@ -48,6 +48,8 @@ Every specialist invocation records workflow, revision, task, agent role, provid
 - OpenAI credentials come only from environment configuration and are never inserted into model context.
 - Source mutation requires the exact current plan hash and runs only through the controlled proposal pipeline. Authenticated approval roles are added in commit 7.
 - Real compiler/test execution is limited to fixed capabilities introduced in commit 6.
+- The validation executor exposes only Maven Wrapper `clean verify` and `clean test`; no model-supplied command reaches `ProcessBuilder`. Secret-bearing environment variables are removed from child builds and output is bounded before persistence.
+- Real failures are classified and persisted. Repair agents receive bounded failure output, relevant current files and hashes, and the prior proposal. Corrected operations re-enter the same patch validator and applier. Retry/backoff is bounded, and terminal recovery verifies restoration against the immutable baseline manifest.
 
 ## Patch boundary
 

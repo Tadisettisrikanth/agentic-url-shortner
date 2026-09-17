@@ -5,6 +5,7 @@ import static org.awaitility.Awaitility.await;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.BDDMockito.given;
 
 import com.jayway.jsonpath.JsonPath;
 import com.srikanth.agenticurlshortner.planning.persistence.EngineeringPlanRepository;
@@ -29,6 +30,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.srikanth.agenticurlshortner.validation.FixedMavenCapabilityTool;
+import com.srikanth.agenticurlshortner.validation.BuildModels.BuildEvidence;
+import com.srikanth.agenticurlshortner.validation.BuildModels.FailureClassification;
+import com.srikanth.agenticurlshortner.validation.BuildModels.MavenCapability;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -43,6 +49,7 @@ class RepositoryPlanningApiTest {
     @Autowired RepositoryAnalysisRepository analyses;
     @Autowired EngineeringPlanRepository plans;
     @Autowired JdbcTemplate jdbc;
+    @MockitoBean FixedMavenCapabilityTool mavenTool;
 
     @BeforeAll
     static void createRepositoryFixture() throws IOException {
@@ -117,6 +124,18 @@ class RepositoryPlanningApiTest {
         assertThat(jdbc.queryForObject("select count(*) from applied_file_operations a join patch_proposals p "
                 + "on p.id=a.proposal_id where p.revision_id=?", Integer.class, revisionId)).isEqualTo(2);
         assertThat(workflows.findById(workflowId).orElseThrow().getStatus()).isEqualTo(WorkflowStatus.EXECUTING);
+        given(mavenTool.execute(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(MavenCapability.CLEAN_VERIFY)))
+                .willReturn(new BuildEvidence(MavenCapability.CLEAN_VERIFY, 0, Duration.ofSeconds(2), false,
+                        "Tests run: 9, Failures: 0\nBUILD SUCCESS\nJaCoCo", "", FailureClassification.NONE,
+                        9, 0, "instruction=88%"));
+        mvc.perform(post("/api/v1/workflows/{id}/validate", workflowId))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("AWAITING_RELEASE_APPROVAL"))
+                .andExpect(jsonPath("$.attempts[0].build.exitCode").value(0))
+                .andExpect(jsonPath("$.attempts[0].build.discoveredTests").value(9));
+        assertThat(jdbc.queryForObject("select count(*) from execution_attempts where task_id in "
+                + "(select id from agent_tasks where revision_id=? and agent_role='VALIDATION') "
+                + "and executor_type='FIXED_MAVEN_CAPABILITY' and status='SUCCEEDED'", Integer.class, revisionId)).isOne();
         mvc.perform(post("/api/v1/workflows/{id}/plan", workflowId)).andExpect(status().isConflict());
     }
 
@@ -127,6 +146,33 @@ class RepositoryPlanningApiTest {
         awaitStatus(workflowId, WorkflowStatus.PLANNING);
         mvc.perform(post("/api/v1/workflows/{id}/plan", workflowId)).andExpect(status().isBadRequest());
         assertThat(revisions.findByWorkflowIdAndRevisionNumber(workflowId, 1)).isPresent();
+    }
+
+    @Test
+    void rollsBackAndPersistsTerminalEvidenceForNonRetryableValidationFailure() throws Exception {
+        UUID workflowId = submit("Create short URLs with POST /urls returning HTTP 201 and redirect GET /{code} with HTTP 302.",
+                "url-shortener");
+        awaitStatus(workflowId, WorkflowStatus.PLANNING);
+        String planned = mvc.perform(post("/api/v1/workflows/{id}/plan", workflowId))
+                .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
+        String planHash = JsonPath.read(planned, "$.planHash");
+        UUID revisionId = UUID.fromString(JsonPath.read(planned, "$.revisionId"));
+        mvc.perform(post("/api/v1/workflows/{id}/changes/apply", workflowId)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"planHash\":\"" + planHash + "\"}"))
+                .andExpect(status().isAccepted());
+        given(mavenTool.execute(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(MavenCapability.CLEAN_VERIFY)))
+                .willReturn(new BuildEvidence(MavenCapability.CLEAN_VERIFY, 1, Duration.ofSeconds(1), false,
+                        "BUILD FAILURE", "unclassified failure", FailureClassification.UNKNOWN, 0, 0, "unavailable"));
+
+        mvc.perform(post("/api/v1/workflows/{id}/validate", workflowId))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("ROLLED_BACK"))
+                .andExpect(jsonPath("$.baselineVerified").value(true))
+                .andExpect(jsonPath("$.attempts[0].decision").value("FALLBACK"));
+
+        assertThat(jdbc.queryForObject("select count(*) from rollback_actions where revision_id=? and verified=true",
+                Integer.class, revisionId)).isOne();
+        assertThat(workflows.findById(workflowId).orElseThrow().getStatus()).isEqualTo(WorkflowStatus.ROLLED_BACK);
     }
 
     private UUID submit(String requirement, String repositoryPath) throws Exception {

@@ -3,6 +3,8 @@ package com.srikanth.agenticurlshortner.workflow.api;
 import com.srikanth.agenticurlshortner.requirement.application.ClarificationService;
 import com.srikanth.agenticurlshortner.planning.RepositoryPlanningService;
 import com.srikanth.agenticurlshortner.patch.PatchApplicationService;
+import com.srikanth.agenticurlshortner.validation.BuildModels.ValidationOutcome;
+import com.srikanth.agenticurlshortner.validation.WorkflowValidationService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -23,15 +25,18 @@ class WorkflowController {
     private final ClarificationService clarificationService;
     private final RepositoryPlanningService planningService;
     private final PatchApplicationService patchApplicationService;
+    private final WorkflowValidationService validationService;
 
     WorkflowController(WorkflowSubmissionService service, WorkflowQueryService queryService,
                        ClarificationService clarificationService, RepositoryPlanningService planningService,
-                       PatchApplicationService patchApplicationService) {
+                       PatchApplicationService patchApplicationService,
+                       WorkflowValidationService validationService) {
         this.service = service;
         this.queryService = queryService;
         this.clarificationService = clarificationService;
         this.planningService = planningService;
         this.patchApplicationService = patchApplicationService;
+        this.validationService = validationService;
     }
 
     @PostMapping
@@ -65,5 +70,11 @@ class WorkflowController {
     ApplyChangesResponse applyChanges(@PathVariable UUID workflowId,
                                       @Valid @RequestBody ApplyChangesRequest request) {
         return patchApplicationService.generateAndApply(workflowId, request);
+    }
+
+    @PostMapping("/{workflowId}/validate")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    ValidationOutcome validate(@PathVariable UUID workflowId) {
+        return validationService.validate(workflowId);
     }
 }
