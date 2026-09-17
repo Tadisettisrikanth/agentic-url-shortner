@@ -96,7 +96,7 @@ Compiler, test, and configuration failures are supplied with bounded current sou
 
 Change approval requires `POST /api/v1/workflows/{id}/approvals/change` with the exact current plan hash and `X-Change-Approver-Token`. After real validation, `POST /outcome` builds criterion-level traceability from persisted production paths, test paths, artifact hashes, and validation attempts. Release approval requires that exact outcome hash and `X-Release-Approver-Token`; incomplete evidence cannot become `RELEASE_READY`. Operators may request a safe stop through `POST /cancel`.
 
-Generated URL-shortener behavior is connected to `POST /urls`, `GET /{code}`, and `GET /urls/{code}/analytics`. See `docs/SCENARIOS.md` for greenfield, brownfield, ambiguity, repair, safe-stop, and rollback runs.
+Generated URL-shortener behavior is connected to creation, inspection, redirect, deactivation, analytics, OpenAPI, RFC problem responses, rate limiting, destination security, regional code allocation, and retention cleanup. See `docs/SCENARIOS.md` for greenfield, brownfield, ambiguity, repair, safe-stop, and rollback runs.
 
 ## Durable execution and packaged review
 
@@ -114,4 +114,4 @@ docker compose up -d --build
 .\demo.ps1 failover
 ```
 
-See [docs/REVIEWER-GUIDE.md](docs/REVIEWER-GUIDE.md), [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md), and [docs/PRODUCTION-DEPLOYMENT.md](docs/PRODUCTION-DEPLOYMENT.md). Production mode uses OIDC/JWT role mapping and optional application TLS; this repository does not claim an externally deployed production environment.
+See [docs/REVIEWER-GUIDE.md](docs/REVIEWER-GUIDE.md), [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md), and [docs/PRODUCTION-DEPLOYMENT.md](docs/PRODUCTION-DEPLOYMENT.md). Production mode uses OIDC/JWT role mapping, managed secret inputs, and TLS configuration.

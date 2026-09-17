@@ -45,6 +45,8 @@ class FixedMavenCapabilityToolTest {
     void capturesAndClassifiesRealCompilerFailure() throws IOException {
         Files.writeString(temporary.resolve("mvnw.cmd"),
                 "@echo off\r\necho [ERROR] COMPILATION FAILURE\r\necho Tests run: 3, Failures: 0\r\nexit /b 1\r\n");
+        Files.writeString(temporary.resolve("mvnw"),
+                "#!/bin/sh\necho '[ERROR] COMPILATION FAILURE'\necho 'Tests run: 3, Failures: 0'\nexit 1\n");
 
         var evidence = tool.execute(temporary, MavenCapability.CLEAN_VERIFY);
 

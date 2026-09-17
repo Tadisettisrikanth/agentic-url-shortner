@@ -77,13 +77,18 @@ public class GovernanceService {
                 .filter(item -> item.getItemType() == ItemType.ACCEPTANCE_CRITERION).toList();
         List<String> production = paths(revisionId, "src/main/%");
         List<String> tests = paths(revisionId, "src/test/%");
+        List<String> artifactHashes = jdbc.query("select sha256 from engineering_artifacts where revision_id=? "
+                        + "and validation_status='PASSED' order by artifact_key", (rs, row) -> rs.getString(1), revisionId);
         List<String> attempts = jdbc.query("select cast(e.id as varchar) from execution_attempts e join agent_tasks t "
                         + "on t.id=e.task_id where t.revision_id=? and e.executor_type='FIXED_MAVEN_CAPABILITY' order by e.started_at",
                 (rs, row) -> rs.getString(1), revisionId);
         boolean buildPassed = Boolean.TRUE.equals(jdbc.queryForObject("select count(*) > 0 from execution_attempts e "
                 + "join agent_tasks t on t.id=e.task_id where t.revision_id=? and e.executor_type='FIXED_MAVEN_CAPABILITY' "
                 + "and e.status='SUCCEEDED'", Boolean.class, revisionId));
-        boolean ready = buildPassed && !production.isEmpty() && !tests.isEmpty();
+        Integer passedPolicies = jdbc.queryForObject("select count(distinct policy_key) from policy_decisions "
+                + "where revision_id=? and decision='ALLOW'", Integer.class, revisionId);
+        boolean ready = buildPassed && !production.isEmpty() && !tests.isEmpty() && !artifactHashes.isEmpty()
+                && passedPolicies != null && passedPolicies >= 6;
         jdbc.update("delete from criterion_traceability where revision_id=?", revisionId);
         for (var criterion : criteria) {
             List<String> taskIds = jdbc.query("select cast(id as varchar) from agent_tasks where revision_id=? and "
@@ -105,9 +110,25 @@ public class GovernanceService {
         outcome.put("workflowId", workflowId); outcome.put("revisionId", revisionId);
         outcome.put("originalRequirement", current.workflow().getOriginalRequirement());
         outcome.put("normalizedRequirement", analysis.getNormalizedProblem());
+        outcome.put("workflowRevision", current.revision().getRevisionNumber());
+        outcome.put("acceptanceCriteria", criteria.stream().map(item -> Map.of("id", item.getItemKey(),
+                "text", item.getContent(), "behavioral", item.isBehavioral())).toList());
         outcome.put("planHash", plans.findByRevisionId(revisionId).orElseThrow().getPlanHash());
         outcome.put("productionFiles", production); outcome.put("testFiles", tests);
-        outcome.put("validationAttempts", attempts); outcome.put("releaseReady", ready);
+        outcome.put("artifactHashes", artifactHashes);
+        outcome.put("taskGraph", jdbc.queryForList("select task_key, agent_role, state, attempt_count from agent_tasks where revision_id=? order by created_at", revisionId));
+        outcome.put("architecture", jdbc.queryForList("select output_json, output_hash from agent_invocations where revision_id=? and agent_role='ARCHITECTURE'", revisionId));
+        outcome.put("appliedDiffs", jdbc.queryForList("select proposal_hash, applied_manifest_hash, unified_diff from patch_proposals where revision_id=? order by created_at", revisionId));
+        outcome.put("validationAttempts", jdbc.queryForList("select e.attempt_number, e.status, e.failure_classification, e.exit_code, e.duration_ms, e.discovered_tests, e.failed_tests, e.coverage_summary, e.recovery_decision, e.repair_proposal_id from execution_attempts e join agent_tasks t on t.id=e.task_id where t.revision_id=? order by e.started_at", revisionId));
+        outcome.put("policies", jdbc.queryForList("select policy_key, decision, reason from policy_decisions where revision_id=? order by created_at", revisionId));
+        outcome.put("approvals", jdbc.queryForList("select gate, evidence_hash, approver, decision, role from approvals where revision_id=? and invalidated_at is null order by created_at", revisionId));
+        outcome.put("risks", items.findByAnalysisIdOrderByItemTypeAscItemKeyAsc(analysis.getId()).stream()
+                .filter(item -> item.getItemType() == ItemType.RISK).map(item -> item.getContent()).toList());
+        outcome.put("assumptions", items.findByAnalysisIdOrderByItemTypeAscItemKeyAsc(analysis.getId()).stream()
+                .filter(item -> item.getItemType() == ItemType.ASSUMPTION).map(item -> item.getContent()).toList());
+        outcome.put("repairs", jdbc.queryForList("select id, proposal_hash, applied_manifest_hash from patch_proposals where revision_id=? and agent_role='REPAIR'", revisionId));
+        outcome.put("rollbacks", jdbc.queryForList("select reason, expected_manifest_hash, restored_manifest_hash, verified from rollback_actions where revision_id=?", revisionId));
+        outcome.put("releaseReady", ready);
         String json = json(outcome); String hash = sha256(json);
         jdbc.update("update agent_tasks set state='COMPLETED', updated_at=? where revision_id=? and "
                         + "task_key in ('plan-risk-review','plan-documentation','plan-release-readiness')",

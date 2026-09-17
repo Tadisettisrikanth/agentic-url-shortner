@@ -76,7 +76,7 @@ Before mutation, the patch engine validates every operation, including normalize
 
 PostgreSQL is the coordination authority. A task claim contains one worker owner, lease expiry, heartbeat, and monotonically increasing fencing token. Claims and takeovers use row locks in a transaction. Completion requires the current unexpired worker/token pair and records a unique effect key before changing task state, so stale workers cannot commit and retries cannot duplicate an effect. Startup and scheduled recovery remove expired claims and return only abandoned `RUNNING` tasks to `READY`; clarification and approval waits remain paused.
 
-The Compose topology runs two non-root orchestrators against the same PostgreSQL database and workspace volume. This demonstrates shared durable state and secondary-instance continuation; it is not a substitute for deployment-platform storage qualification.
+The Compose topology runs two non-root orchestrators against the same PostgreSQL database and workspace volume, demonstrating shared durable state and secondary-instance continuation.
 
 ## Security and operations
 

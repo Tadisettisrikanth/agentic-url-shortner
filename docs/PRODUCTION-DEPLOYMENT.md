@@ -1,6 +1,6 @@
 # Production Deployment
 
-The repository supplies a deployment reference, not a claim of a deployed production environment. Build with `./mvnw clean verify`, then `docker compose build`. Containers run as UID 10001 and two orchestrators share PostgreSQL and a workspace volume.
+Build with `./mvnw clean verify`, then `docker compose build`. Containers run as UID 10001 and two orchestrators share PostgreSQL and a workspace volume.
 
 Use the `prod` profile with `OIDC_ISSUER_URI`. JWT `roles` values map to `OPERATOR`, `CHANGE_APPROVER`, and `RELEASE_APPROVER`. Configure TLS with `SERVER_SSL_CERTIFICATE` and `SERVER_SSL_PRIVATE_KEY`, or terminate TLS at a trusted proxy while preserving forwarded headers. Local Basic authentication is excluded from `prod`.
 
