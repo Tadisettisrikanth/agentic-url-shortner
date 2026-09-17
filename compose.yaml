@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: agentic_url_shortner
+      POSTGRES_USER: agentic
+      POSTGRES_PASSWORD: local-agentic-password
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentic -d agentic_url_shortner"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - agentic-postgres:/var/lib/postgresql/data
+
+volumes:
+  agentic-postgres:
+
