@@ -273,7 +273,8 @@ public final class ModelFileOperationProposalAgent implements FileOperationPropo
             import org.junit.jupiter.api.Test;
             class GeneratedUrlServiceTest {
                 private final Instant now = Instant.parse("2026-01-02T12:00:00Z");
-                private final GeneratedUrlService service = new GeneratedUrlService(Clock.fixed(now, ZoneOffset.UTC));
+                private final MutableClock clock = new MutableClock(now);
+                private final GeneratedUrlService service = new GeneratedUrlService(clock);
                 @Test void reservesRedirectsAndCountsUtcDay() {
                     service.create("https://example.com/a", "Alias_1", null);
                     assertThat(service.redirect("Alias_1")).contains(java.net.URI.create("https://example.com/a"));
@@ -284,7 +285,10 @@ public final class ModelFileOperationProposalAgent implements FileOperationPropo
                     service.create("https://example.com", "caseName", null);
                     assertThatThrownBy(() -> service.create("https://other.example", "caseName", null)).isInstanceOf(GeneratedUrlService.AliasConflictException.class);
                     assertThatThrownBy(() -> service.create("https://example.com", "x!", null)).isInstanceOf(IllegalArgumentException.class);
-                    service.create("https://example.com/old", "Expired1", now.minusSeconds(1));
+                    assertThatThrownBy(() -> service.create("https://example.com/old", "PastExpiry", now.minusSeconds(1)))
+                            .isInstanceOf(IllegalArgumentException.class);
+                    service.create("https://example.com/old", "Expired1", now.plusSeconds(1));
+                    clock.advance(Duration.ofSeconds(2));
                     assertThatThrownBy(() -> service.redirect("Expired1")).isInstanceOf(GeneratedUrlService.ExpiredLinkException.class);
                     assertThat(service.redirect("CASENAME")).isEmpty();
                 }
@@ -305,6 +309,14 @@ public final class ModelFileOperationProposalAgent implements FileOperationPropo
                                 .toList();
                         for (var future : futures) assertThat(future.get()).isNotNull();
                     }
+                }
+                private static final class MutableClock extends Clock {
+                    private Instant current;
+                    private MutableClock(Instant current) { this.current = current; }
+                    void advance(Duration duration) { current = current.plus(duration); }
+                    @Override public ZoneId getZone() { return ZoneOffset.UTC; }
+                    @Override public Clock withZone(ZoneId zone) { return this; }
+                    @Override public Instant instant() { return current; }
                 }
             }
             """; }

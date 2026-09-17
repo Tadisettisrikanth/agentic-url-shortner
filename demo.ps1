@@ -72,7 +72,18 @@ if ($Scenario -eq "failover") {
 $validation=Invoke-Agentic Post "/api/v1/workflows/$($submitted.workflowId)/validate"
 Write-Host "Validation attempts:" $validation.attempts.Count "Status:" $validation.status
 if ($validation.status -ne "AWAITING_RELEASE_APPROVAL") {
-    $validation.attempts | ConvertTo-Json -Depth 10
+    foreach ($attempt in $validation.attempts) {
+        Write-Host "Attempt $($attempt.attemptNumber): exit=$($attempt.build.exitCode) classification=$($attempt.build.classification) decision=$($attempt.decision)"
+        if ($attempt.reason) { Write-Host "Reason:" $attempt.reason }
+        foreach ($stream in @("stdout", "stderr")) {
+            $content = [string]$attempt.build.$stream
+            if ($content) {
+                $tailLength = [Math]::Min(4000, $content.Length)
+                Write-Host ($stream.ToUpper() + " tail:")
+                Write-Host $content.Substring($content.Length - $tailLength)
+            }
+        }
+    }
     throw "Validation did not pass. Rebuild the image after Dockerfile changes, then inspect the persisted attempt output above."
 }
 $outcome=Invoke-Agentic Post "/api/v1/workflows/$($submitted.workflowId)/outcome"
